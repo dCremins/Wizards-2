@@ -10,18 +10,30 @@ inventory = Bag()
 #####################
 # Items
 #####################
+Item.location = 'is here'
+Item.desc = ''
+Item.roomdesc = ''
+Item.inspected = False
 
 gCrystal = Item('grey crystal', 'gray crystal')
-bCrystal = Item('blue crystal', 'glitter', 'glittering thing', 'something glittering')
+
+bCrystal = Item('glitters', 'glitter', 'glittering thing', 'something glittering', 'blue crystal')
+bCrystal.location = 'from under some papers'
+bCrystal.desc = 'A luminous BLUE CRYSTAL'
+bCrystal.roomdesc = 'Something GLITTERS'
+
 rCrystal = Item('brown crystal')
+
 yCrystal = Item('yellow crystal')
 
 #####################
 # Characters
 #####################
 
-cat = Item('a cat', 'furry thing', 'something furry')
+cat = Item('furry', 'furry thing', 'something furry', 'arnold', 'arnold fuzzybottom', 'cat', 'fuzzybottom')
+cat.location = 'is curled up in an old suitcase'
 cat.def_name = 'Arnold Fuzzybottom'
+cat.roomdesc = 'Something FURRY'
 
 #####################
 # Rooms
@@ -39,8 +51,6 @@ STAIRS lead DOWN into another room of the tower.
 
 downstairs = Room("""
 This room is used for storage and is filled with lots of junk.
-Something FURRY is curled up in an old suitcase.
-Something GLITTERS from under some papers.
 """)
 downstairs.lit = False
 downstairs.items = Bag({bCrystal, cat})
@@ -57,23 +67,44 @@ def look():
         print("It's too dark for you to see anything.")
     else:
         print(current_room)
+        if current_room.items:
+            for i in current_room.items:
+                print(('%s ' % i.roomdesc)+ ('%s ' % i.location))
 
 @when('look ITEM')
 @when('look at ITEM')
 def look_at(item):
     obj = inventory.find(item)
     rm = current_room.items.find(item)
-    if obj:
-        print("It's a %s. You put it back in your bag" % obj)
-    elif rm:
-        print("It's a %s." % rm)
+
+    if rm:
+        if not rm.inspected:
+            rm.inspected = True
+            if hasattr(rm, 'def_name'):
+                rm.roomdesc = rm.def_name
+            else:
+                rm.roomdesc = rm.desc
+        if hasattr(rm, 'def_name'):
+            print("It's %s." % rm.def_name)
+        else:
+            print("It's " + ("%s." % rm.roomdesc.lower()))
+    elif obj:
+        print("It's " + ("%s." % rm.roomdesc.lower()) + ". You put it back in your bag")
+    else:
+        print("What %s?" % item)
 
 @when('take ITEM')
 def take(item):
-    obj = current_room.items.take(item)
+    obj = current_room.items.find(item)
     if obj:
-        say('You pick up the %s.' % obj)
-        inventory.add(obj)
+        if not obj.inspected:
+            print("Shouldn't you look at that first? What if it bites!")
+        elif hasattr(obj, 'def_name'):
+            print("I don't think they'd like that.")
+        else:
+            say('You pick up ' + ("%s." % obj.roomdesc.lower()))
+            obj = current_room.items.take(item)
+            inventory.add(obj)
     else:
         say('There is no %s here.' % item)
 
@@ -104,8 +135,7 @@ def climb_stairs():
 
     current_room = downstairs
 
-    print("""You climb the stairs.
-    """)
+    print("You climb the stairs.")
 
     look()
 
@@ -120,9 +150,7 @@ def down_stairs():
 
     current_room = downstairs
 
-    print("""You walk down the stairs.
-    """)
-
+    print("You walk down the stairs.")
     look()
 
 @when('turn on lights')
