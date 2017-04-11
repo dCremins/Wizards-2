@@ -1,4 +1,5 @@
 from adventurelib import *
+from puzzles import reveal
 import rooms, items
 
 #####################
@@ -19,7 +20,7 @@ def look():
         print(current_room)
         if current_room.items:
             for i in current_room.items:
-                print(('%s ' % i.roomdesc)+ ('%s ' % i.location))
+                print(('%s' % i.roomdesc) + ' is ' + ('%s' % i.location))
 
 @when('look ITEM')
 @when('look at ITEM')
@@ -34,14 +35,22 @@ def look_at(item):
                 rm.roomdesc = rm.def_name
             else:
                 rm.roomdesc = rm.desc
+            if hasattr(rm, 'puzzle_name'):
+                print("it's a puzzle!")
+                reveal(rm.puzzle_name, current_room)
         if hasattr(rm, 'def_name'):
             print("It's %s." % rm.def_name)
         else:
             print("It's " + ("%s." % rm.roomdesc.lower()))
+        if hasattr(rm, 'puzzle'):
+            print(rm.puzzle)
     elif obj:
         print("It's " + ("%s." % rm.roomdesc.lower()) + ". You put it back in your bag")
     else:
         print("What %s?" % item)
+    print("""
+    """)
+    look()
 
 @when('take ITEM')
 def take(item):
@@ -67,6 +76,28 @@ def drop(thing):
         say('You drop the %s.' % obj)
         current_room.items.add(obj)
 
+@when('put THING in PLACE', action='in')
+@when('put THING on PLACE', action='on')
+@when('use THING in PLACE', action='in')
+@when('use THING on PLACE', action='on')
+def put(thing, place, action):
+    obj = inventory.take(thing)
+    if not obj:
+        say('You do not have a %s.' % thing)
+    if not hasattr(place, 'items'):
+        print("I don't see a %s anywhere." % place)
+    elif not isinstance(place.items, Bag):
+        print("Those things don't go together")
+        inventory.add(thing)
+    elif place.items.get_random() is not None:
+        print("There is already something here.")
+        inventory.add(thing)
+    else:
+        print(("You put the %s" % thing) + (" %s the" % action) + (place))
+        place.add(thing)
+
+
+
 @when('inventory')
 @when('i')
 def show_inventory():
@@ -85,73 +116,38 @@ def show_inventory():
 def chit_chat(person):
     char = current_room.items.find(person)
     conversation = {}
+    # Not in the room
     if not char:
         print("Who is that?")
+    # Not Character
     elif not hasattr(char, 'def_name'):
         print("You talk to the %s but no one responds. You feel a little silly." % char)
+    # Character
     else:
-        if char == items.ghost:
-            print("You talk to the ghost.")
+        # If you haven't investigated it already
+        # count this as investigating it
+        if not char.inspected:
+            if not char.inspected:
+                char.inspected = True
+                char.roomdesc = char.def_name
+                print("It's %s." % char.roomdesc)
+                print("You approach %s." % char.roomdesc)
+
+        if char == items.cat:
             conversation = {'Sup?': {'B': 'Not Much', 'C': 'I\'m looking for crystals', 'D': 'Holy shit! You can talk!?'},
                 'B': 'Right....So, did you like, need something?',
-                'C': 'Did you try the bookcase?',
+                'C': 'RND',
                 'D': 'What? Did you hit your head or something?',
                 'What? Did you hit your head or something?': {'F': 'Yes', 'G': 'No!', 'H': 'Do you like cheese?'},
-                'F': 'Cool....So, did you like, need something?',
-                'G': 'Cool....So, did you like, need something?',
-                'H': 'Cool....So, did you like, need something?',
-                'Cool....So, did you like, need something?': {'C': 'I\'m Looking for crystals', 'J': "No"},
+                'F': 'Right....So, did you like, need something?',
+                'G': 'Right....So, did you like, need something?',
+                'H': 'Right....So, did you like, need something?',
+                'Right....So, did you like, need something?': {'C': 'I\'m Looking for crystals', 'J': "No"},
                 'J': 'Ok. Bye then.',
-                'Did you try the bookcase?': {'L': 'I already found that', 'M': 'Thanks!'},
-                'L': 'Did you try the bookcase?',
-                'M': 'Ok. Bye then.'}
+                'RND': {'1': 'I already found that', '0': 'Thanks'},
+                '1': 'RND',
+                '0': 'Ok. Bye then.'}
             talk(conversation, list(conversation.keys())[0], conversation[list(conversation.keys())[-1]])
-
-def talk(convo, start, end):
-    done = False
-    if start not in convo:
-        print("what?")
-        done = True
-    else:
-        print("""
-        """)
-        print('"' + (list(convo.keys())[0]) + '"')
-
-    while not done:
-        for node in convo[start]:
-            if convo[start][node]:
-                desc = ': ' + convo[start][node]
-            else:
-                desc = ''
-            print(("[%s]" % node) + desc)
-        print("""
-        """)
-        try:
-            start = input('>>').strip()
-        except EOFError:
-            print()
-            break
-
-        if not start:
-            continue
-        if start.lower() == 'quit' or start.lower() == 'q':
-            print("You awkwardly leave the conversation.")
-            break
-        elif convo[start.upper()] == end:
-            print('"' + (convo[start.upper()]) + '"')
-            done = True
-        else:
-            print('"' + (convo[start.upper()]) + '"')
-            start = convo[start.upper()]
-
-    print("""
-    """)
-    look()
-
-
-
-
-
 
 
 
@@ -159,6 +155,71 @@ def talk(convo, start, end):
 # Dialogue Tree
 #####################
 
+def talk(convo, choice, end):
+    done = False
+    if choice not in convo:
+        print("what?")
+        done = True
+    else:
+        # print Arnold's first response
+        print("""
+        """)
+        print('"' + (list(convo.keys())[0]) + '"')
+
+    while not done:
+        # randomly choose a crystal location
+        rnd_loc = items.crystals.take_random()
+        # print choices based on Arnold's response
+        for node in convo[choice]:
+            if convo[choice][node]:
+                desc = ': ' + convo[choice][node]
+            else:
+                desc = ''
+            print(("[%s]" % node) + desc)
+        print("""
+        """)
+        # set choice qual to user input
+        try:
+            hold = input('>>').strip()
+            if not hold.upper() in convo[choice]:
+                print("what?")
+                continue
+            else:
+                choice = hold
+        except EOFError:
+            print()
+            break
+
+        # if input is quit, exit conversation
+        if choice.lower() == 'quit' or choice.lower() == 'q':
+            print("You awkwardly leave the conversation.")
+            break
+        # if input doesn't exist
+        if choice.upper() not in convo:
+            print("huh?")
+        # if input triggers Arnold's end response
+        elif convo[choice.upper()] == end:
+            print('"' + (convo[choice.upper()]) + '"')
+            done = True
+        # if input triggers random location response
+        elif convo[choice.upper()] == 'RND':
+            if not rnd_loc:
+                print("Well I got nothing man.")
+                del convo["RND"]["1"]
+                #del convo["1"]
+            else:
+                print("Did you look %s?" % rnd_loc.location)
+            choice = convo[choice.upper()]
+        # print Arnold's response
+        # then change choice to Arnold's response
+        # and return to the top of the while loop
+        else:
+            print('"' + (convo[choice.upper()]) + '"')
+            choice = convo[choice.upper()]
+
+    print("""
+    """)
+    look()
 
 #####################
 # Navigation Commands
@@ -172,7 +233,6 @@ current_room = rooms.upstairs
 @when('turn light on')
 def clap_on():
     global current_room
-
     if not current_room.lit:
         print("You turn on the lights.")
         current_room.lit = True
@@ -186,7 +246,6 @@ def clap_on():
 @when('turn light off')
 def clap_off():
     global current_room
-
     if current_room.lit:
         print("You turn off the lights.")
         current_room.lit = False
@@ -199,28 +258,21 @@ def clap_off():
 @when('up')
 def climb_stairs():
     global current_room
-
     if current_room is not rooms.downstairs:
         print("You're already upstairs.")
         return
-
-    current_room = rooms.downstairs
-
+    current_room = rooms.upstairs
     print("You climb the stairs.")
-
     look()
 
 @when('go downstairs')
 @when('down')
 def down_stairs():
     global current_room
-
     if current_room is not rooms.upstairs:
         print("You're already downstairs.")
         return
-
     current_room = rooms.downstairs
-
     print("You walk down the stairs.")
     look()
 
