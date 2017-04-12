@@ -143,11 +143,11 @@ def chit_chat(person):
         # If you haven't investigated it already
         # count this as investigating it
         if not char.inspected:
-            if not char.inspected:
-                char.inspected = True
-                char.roomdesc = char.def_name
-                delay_print("It's %s." % char.roomdesc)
-                delay_print("You approach %s." % char.roomdesc)
+            char.inspected = True
+            char.roomdesc = char.def_name
+            delay_print("It's %s." % char.roomdesc)
+
+        delay_print("You approach %s." % char.roomdesc)
 
         if char == items.cat:
             conversation = {'Sup?': {'B': 'Not Much', 'C': 'I\'m looking for crystals', 'D': 'Holy shit! You can talk!?'},
@@ -197,8 +197,12 @@ def talk(convo, choice, end):
         # set choice qual to user input
         try:
             hold = input('>>').strip()
-            if not hold.upper() in convo[choice]:
-                delay_print("what?")
+            # if input is quit, exit conversation
+            if hold.lower() == 'quit' or hold.lower() == 'q':
+                delay_print("You awkwardly leave the conversation.")
+                break
+            elif not hold.upper() in convo[choice]:
+                delay_print("What?")
                 continue
             else:
                 choice = hold
@@ -206,13 +210,10 @@ def talk(convo, choice, end):
             delay_print()
             break
 
-        # if input is quit, exit conversation
-        if choice.lower() == 'quit' or choice.lower() == 'q':
-            delay_print("You awkwardly leave the conversation.")
-            break
+
         # if input doesn't exist
         if choice.upper() not in convo:
-            delay_print("huh?")
+            delay_print("Huh?")
         # if input triggers Arnold's end response
         elif convo[choice.upper()] == end:
             delay_print('"' + (convo[choice.upper()]) + '"')
