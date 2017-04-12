@@ -1,5 +1,5 @@
 from adventurelib import *
-#from puzzles import reveal
+from helpers import *
 import rooms, items, puzzles
 
 #####################
@@ -15,16 +15,16 @@ inventory = Bag({items.rCrystal})
 @when('look')
 def look():
     if not current_room.lit:
-        print("It's too dark for you to see anything.")
+        delay_print("It's too dark for you to see anything.")
     else:
-        print(current_room)
+        delay_print(current_room)
         if current_room.items:
             for i in current_room.items:
-                print(('%s' % i.roomdesc) + ' is ' + ('%s' % i.location))
+                delay_print(('%s' % i.roomdesc) + ' is ' + ('%s' % i.location))
                 if hasattr(i, 'items'):
                     for obj in i.items:
-                        print(('%s' % obj.roomdesc) + (' is in the %s' % i.single))
-        print("")
+                        delay_print(('%s' % obj.roomdesc) + (' is in the %s' % i.single))
+        delay_print("")
 
 @when('look ITEM')
 @when('look at ITEM')
@@ -40,17 +40,17 @@ def look_at(item):
             else:
                 rm.roomdesc = rm.desc
             if hasattr(rm, 'puzzle_name'):
-                print("It's " + ("%s." % rm.roomdesc.lower()))
+                delay_print("It's " + ("%s." % rm.roomdesc.lower()))
                 puzzles.reveal(rm.puzzle_name, current_room)
                 return
         if hasattr(rm, 'def_name'):
-            print("It's %s." % rm.def_name)
+            delay_print("It's %s." % rm.def_name)
         else:
-            print("It's " + ("%s." % rm.roomdesc.lower()))
+            delay_print("It's " + ("%s." % rm.roomdesc.lower()))
     elif obj:
-        print("It's " + ("%s" % obj.roomdesc.lower()) + " You put it back in your bag")
+        delay_print("It's " + ("%s" % obj.roomdesc.lower()) + " You put it back in your bag")
     else:
-        print("What %s?" % item)
+        delay_print("What %s?" % item)
 
 
 @when('take ITEM')
@@ -58,9 +58,9 @@ def take(item):
     obj = current_room.items.find(item)
     if obj:
         if not obj.inspected:
-            print("Shouldn't you look at that first? What if it bites!")
+            delay_print("Shouldn't you look at that first? What if it bites!")
         elif hasattr(obj, 'def_name'):
-            print("I don't think they'd like that.")
+            delay_print("I don't think they'd like that.")
         else:
             say('You pick up ' + ("%s." % obj.roomdesc.lower()))
             obj = current_room.items.take(item)
@@ -71,9 +71,9 @@ def take(item):
                 obj = i.items.find(item)
                 if obj:
                     if not obj.inspected:
-                        print("Shouldn't you look at that first? What if it bites!")
+                        delay_print("Shouldn't you look at that first? What if it bites!")
                     elif hasattr(obj, 'def_name'):
-                        print("I don't think they'd like that.")
+                        delay_print("I don't think they'd like that.")
                     else:
                         say('You pick up ' + ("%s." % obj.roomdesc.lower()))
                         obj = i.items.take(item)
@@ -100,15 +100,15 @@ def put(thing, place, action):
     if not obj:
         say('You do not have a "%s".' % thing)
     elif not hasattr(slot, 'items'):
-        print(("I don't anywhere %s " % action) + ("the %s to put that." % slot.single))
+        delay_print(("I don't anywhere %s " % action) + ("the %s to put that." % slot.single))
     elif not isinstance(slot.items, Bag):
-        print("Those things don't go together")
+        delay_print("Those things don't go together")
         inventory.add(obj)
     elif slot.items.get_random() is not None:
-        print("There is already something here.")
+        delay_print("There is already something here.")
         inventory.add(obj)
     else:
-        print(("You put the %s" % obj.single) + (" %s the " % action) + (slot.single))
+        delay_print(("You put the %s" % obj.single) + (" %s the " % action) + (slot.single))
         slot.items.add(obj)
         puzzles.check_solve(obj, slot)
 
@@ -134,10 +134,10 @@ def chit_chat(person):
     conversation = {}
     # Not in the room
     if not char:
-        print("Who is that?")
+        delay_print("Who is that?")
     # Not Character
     elif not hasattr(char, 'def_name'):
-        print("You talk to the %s but no one responds. You feel a little silly." % char)
+        delay_print("You talk to the %s but no one responds. You feel a little silly." % char)
     # Character
     else:
         # If you haven't investigated it already
@@ -146,8 +146,8 @@ def chit_chat(person):
             if not char.inspected:
                 char.inspected = True
                 char.roomdesc = char.def_name
-                print("It's %s." % char.roomdesc)
-                print("You approach %s." % char.roomdesc)
+                delay_print("It's %s." % char.roomdesc)
+                delay_print("You approach %s." % char.roomdesc)
 
         if char == items.cat:
             conversation = {'Sup?': {'B': 'Not Much', 'C': 'I\'m looking for crystals', 'D': 'Holy shit! You can talk!?'},
@@ -174,13 +174,13 @@ def chit_chat(person):
 def talk(convo, choice, end):
     done = False
     if choice not in convo:
-        print("what?")
+        delay_print("what?")
         done = True
     else:
         # print Arnold's first response
-        print("""
+        delay_print("""
         """)
-        print('"' + (list(convo.keys())[0]) + '"')
+        delay_print('"' + (list(convo.keys())[0]) + '"')
 
     while not done:
         # randomly choose a crystal location
@@ -191,49 +191,49 @@ def talk(convo, choice, end):
                 desc = ': ' + convo[choice][node]
             else:
                 desc = ''
-            print(("[%s]" % node) + desc)
-        print("""
+            delay_print(("[%s]" % node) + desc)
+        delay_print("""
         """)
         # set choice qual to user input
         try:
             hold = input('>>').strip()
             if not hold.upper() in convo[choice]:
-                print("what?")
+                delay_print("what?")
                 continue
             else:
                 choice = hold
         except EOFError:
-            print()
+            delay_print()
             break
 
         # if input is quit, exit conversation
         if choice.lower() == 'quit' or choice.lower() == 'q':
-            print("You awkwardly leave the conversation.")
+            delay_print("You awkwardly leave the conversation.")
             break
         # if input doesn't exist
         if choice.upper() not in convo:
-            print("huh?")
+            delay_print("huh?")
         # if input triggers Arnold's end response
         elif convo[choice.upper()] == end:
-            print('"' + (convo[choice.upper()]) + '"')
+            delay_print('"' + (convo[choice.upper()]) + '"')
             done = True
         # if input triggers random location response
         elif convo[choice.upper()] == 'RND':
             if not rnd_loc:
-                print("Well I got nothing man.")
+                delay_print("Well I got nothing man.")
                 del convo["RND"]["1"]
                 #del convo["1"]
             else:
-                print("Did you look %s?" % rnd_loc.location)
+                delay_print("Did you look %s?" % rnd_loc.location)
             choice = convo[choice.upper()]
         # print Arnold's response
         # then change choice to Arnold's response
         # and return to the top of the while loop
         else:
-            print('"' + (convo[choice.upper()]) + '"')
+            delay_print('"' + (convo[choice.upper()]) + '"')
             choice = convo[choice.upper()]
 
-    print("""
+    delay_print("""
     """)
     look()
 
@@ -250,11 +250,11 @@ current_room = rooms.upstairs
 def clap_on():
     global current_room
     if not current_room.lit:
-        print("You turn on the lights.")
+        delay_print("You turn on the lights.")
         current_room.lit = True
         look()
     else:
-        print("The lights are already on.")
+        delay_print("The lights are already on.")
 
 @when('turn off lights')
 @when('turn off light')
@@ -263,11 +263,11 @@ def clap_on():
 def clap_off():
     global current_room
     if current_room.lit:
-        print("You turn off the lights.")
+        delay_print("You turn off the lights.")
         current_room.lit = False
         look()
     else:
-        print("The lights are already off.")
+        delay_print("The lights are already off.")
 
 
 @when('go upstairs')
@@ -275,10 +275,10 @@ def clap_off():
 def climb_stairs():
     global current_room
     if current_room is not rooms.downstairs:
-        print("You're already upstairs.")
+        delay_print("You're already upstairs.")
         return
     current_room = rooms.upstairs
-    print("You climb the stairs.")
+    delay_print("You climb the stairs.")
     look()
 
 @when('go downstairs')
@@ -286,10 +286,10 @@ def climb_stairs():
 def down_stairs():
     global current_room
     if current_room is not rooms.upstairs:
-        print("You're already downstairs.")
+        delay_print("You're already downstairs.")
         return
     current_room = rooms.downstairs
-    print("You walk down the stairs.")
+    delay_print("You walk down the stairs.")
     look()
 
 
@@ -315,7 +315,7 @@ def down_stairs():
 # Start the Game
 #####################
 
-print("""
+delay_print("""
 *********************************
 ========     Wizards!     =======
 
